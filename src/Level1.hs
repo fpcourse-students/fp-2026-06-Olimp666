@@ -5,22 +5,20 @@ import Data.Kind (Type)
 import Examples qualified as E
 import MetaUtils (todo, todoImpl)
 
-
 -- 1.1. Прочитайте src/Examples.hs до запуска.
 -- Запишите результаты литералами и конструкторами, без вычислений из условия.
 
 -- E.render E.Warning
 predictedShow :: String
-predictedShow = todo "1.1 show"
+predictedShow = "[WARNING]"
 
 -- E.Labelled "old" 7 == E.Labelled "new" 7
 predictedEq :: Bool
-predictedEq = todo "1.1 eq"
+predictedEq = True
 
 -- fmap not (Just True)
 predictedFmap :: Maybe Bool
-predictedFmap = todo "1.1 fmap"
-
+predictedFmap = Just False
 
 -- 1.2. Равенство деревьев.
 -- Сравните форму дерева и вторую компоненту пары в каждом узле.
@@ -28,14 +26,13 @@ predictedFmap = todo "1.1 fmap"
 -- Законы Eq — лекция 6; среди тестов есть Reflexivity, Symmetry, Transitivity.
 
 data IntTree = IntLeaf | IntNode IntTree (Int, Int) IntTree
-  deriving Show
+  deriving (Show)
 
 {- HLINT ignore "Use record patterns" -}
 instance Eq IntTree where
   IntLeaf == IntLeaf = True
-  IntNode _ _ _ == IntNode _ _ _ = todo "1.2"
+  IntNode l1 (_, x1) r1 == IntNode l2 (_, x2) r2 = l1 == l2 && x1 == x2 && r1 == r2
   _ == _ = False
-
 
 -- 1.3. Functor для дерева с произвольным числом детей.
 -- Примените функцию к значению каждого Node. Форму и порядок детей сохраните.
@@ -44,8 +41,9 @@ instance Eq IntTree where
 data Tree a = Leaf | Node a [Tree a]
   deriving (Eq, Show)
 
-todoImpl ''Functor ''Tree
-
+instance Functor Tree where
+  fmap _ Leaf = Leaf
+  fmap f (Node x children) = Node (f x) (map (fmap f) children)
 
 -- 1.4. Сравнение структур.
 -- Класс StructEq сравнивает форму контейнеров, игнорируя значения элементов.
@@ -57,5 +55,12 @@ todoImpl ''Functor ''Tree
 class StructEq (f :: Type -> Type) where
   (==#) :: f a -> f b -> Bool
 
-todoImpl ''StructEq ''[]
-todoImpl ''StructEq ''Tree
+instance StructEq [] where
+  (==#) [] [] = True
+  (==#) (_ : aa) (_ : bb) = aa ==# bb
+  (==#) _ _ = False
+
+instance StructEq Tree where
+  (==#) Leaf Leaf = True
+  (==#) (Node _ l1) (Node _ l2) = l1 ==# l2 && and (zipWith (==#) l1 l2)
+  (==#) _ _ = False
